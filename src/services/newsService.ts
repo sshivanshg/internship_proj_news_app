@@ -213,4 +213,109 @@ export const AVAILABLE_CATEGORIES = [
   'technology'
 ];
 
+/**
+ * Save an article to user's saved list
+ */
+export async function saveArticle(article: Article): Promise<any> {
+  try {
+    const token = authService.getToken();
+    
+    if (!token) {
+      throw new Error('Authentication required to save articles');
+    }
+
+    console.log('Saving article:', article.title);
+    const response = await fetch('https://n8n-dev.subspace.money/webhook/article', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ article }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response from save API:', errorText);
+      throw new Error(`Error saving article: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to save article:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all saved articles for the current user
+ */
+export async function getSavedArticles(): Promise<Article[]> {
+  try {
+    const token = authService.getToken();
+    
+    if (!token) {
+      throw new Error('Authentication required to get saved articles');
+    }
+
+    const response = await fetch('https://n8n-dev.subspace.money/webhook/saved', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error fetching saved articles: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Handle different response formats
+    if (data.data && Array.isArray(data.data)) {
+      return data.data;
+    }
+    
+    if (Array.isArray(data)) {
+      return data;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Failed to fetch saved articles:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a saved article
+ */
+export async function deleteSavedArticle(articleId: string): Promise<any> {
+  try {
+    const token = authService.getToken();
+    
+    if (!token) {
+      throw new Error('Authentication required to delete saved articles');
+    }
+
+    const response = await fetch('https://n8n-dev.subspace.money/webhook/delete', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ articleId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error deleting article: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to delete saved article:', error);
+    throw error;
+  }
+}
+
 export { type Article, type ApiResponse, type FetchArticlesOptions }; 

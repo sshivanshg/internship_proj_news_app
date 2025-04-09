@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { fetchArticles, summarizeArticle, AVAILABLE_CATEGORIES, type Article as NewsArticle } from '../services/newsService';
+import { fetchArticles, saveArticle, summarizeArticle, AVAILABLE_CATEGORIES, type Article as NewsArticle } from '../services/newsService';
 
 interface Article extends NewsArticle {
   sentiment?: 'positive' | 'negative' | 'neutral';
@@ -74,13 +74,33 @@ const NewsFeed = () => {
     toast.success('Article marked as read');
   };
 
-  const handleSaveArticle = (articleId: string) => {
-    setArticles((prev) =>
-      prev.map((article) =>
-        article.id === articleId ? { ...article, is_saved: !article.is_saved } : article
-      )
-    );
-    toast.success('Article saved successfully');
+  const handleSaveArticle = async (articleId: string) => {
+    try {
+      // Find the article to save
+      const articleToSave = articles.find(article => article.id === articleId);
+      if (!articleToSave) {
+        toast.error('Article not found');
+        return;
+      }
+
+      // Show loading toast
+      const toastId = toast.loading('Saving article...');
+
+      // Call the backend API to save the article
+      await saveArticle(articleToSave);
+      
+      // Update UI state
+      setArticles(prev =>
+        prev.map(article =>
+          article.id === articleId ? { ...article, is_saved: true } : article
+        )
+      );
+      
+      toast.success('Article saved successfully', { id: toastId });
+    } catch (error) {
+      console.error('Failed to save article:', error);
+      toast.error(`Failed to save article: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleSummarizeArticle = async (articleId: string) => {
@@ -284,16 +304,6 @@ const NewsFeed = () => {
                     }`}
                   >
                     {article.is_read ? 'Read' : 'Mark as Read'}
-                  </button>
-                  <button
-                    onClick={() => handleSaveArticle(article.id!)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium ${
-                      article.is_saved
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {article.is_saved ? 'Saved' : 'Save'}
                   </button>
                   <button
                     onClick={() => handleSummarizeArticle(article.id!)}
