@@ -1,3 +1,5 @@
+import authService from '../services/authService';
+
 interface Article {
   id?: string;
   title: string;
@@ -121,31 +123,80 @@ export async function fetchArticleById(id: string): Promise<Article> {
 
 export async function summarizeArticle(article: Article): Promise<string> {
   try {
-    // Change endpoint from webhook-test to webhook to match other API calls
-    const response = await fetch('https://n8n-dev.subspace.money/webhook/summarise', {
+    console.log('Summarize request for article:', article.title);
+    
+    // Get auth token - might be required for the API
+    const token = authService.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add auth header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Try the first endpoint format
+    let response = await fetch('https://n8n-dev.subspace.money/webhook/summarise', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
-        // Send the entire article object to ensure all necessary data is available
-        article: {
-          content: article.description || article.content || '',
-          title: article.title,
-          url: article.url,
-          source: article.source,
-          category: article.category
-        }
+        // Format 1: Flat structure
+        content: article.description || article.content || '',
+        title: article.title,
+        url: article.url || '',
+        source: article.source || 'unknown',
+        category: article.category || 'general'
       }),
     });
 
+    // If first attempt fails, try alternative endpoint
     if (!response.ok) {
+      console.log('First summarize attempt failed, trying alternative endpoint');
+      
+      response = await fetch('https://n8n-dev.subspace.money/webhook/summarise', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          // Format 2: Nested article structure
+          article: {
+            content: article.description || article.content || '',
+            title: article.title,
+            url: article.url || '',
+            source: article.source || 'unknown',
+            category: article.category || 'general'
+          }
+        }),
+      });
+    }
+
+    // If both attempts fail, throw error
+    if (!response.ok) {
+      console.error(`All summarize attempts failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
       throw new Error(`Error summarizing article: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Summarize API response:', data);
+    
+    // Handle various response formats
+    if (typeof data === 'string') {
+      return data;
+    }
+    
     // Check for summary in different possible response formats
-    return data.content || data.summary || data.result || 'No summary available';
+    const summary = 
+      data.summary || 
+      data.content || 
+      data.result || 
+      (data.data && data.data.summary) || 
+      (data.response && data.response.summary) || 
+      'No summary available';
+      
+    console.log('Extracted summary:', summary);
+    return summary;
   } catch (error) {
     console.error('Failed to summarize article:', error);
     throw error;

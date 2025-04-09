@@ -70,7 +70,10 @@ const SavedArticles = () => {
     try {
       // Find the article to summarize
       const articleToSummarize = articles.find(article => article.id === articleId);
-      if (!articleToSummarize) return;
+      if (!articleToSummarize) {
+        toast.error('Article not found');
+        return;
+      }
 
       // Set summarizing state to true
       setArticles(prev => 
@@ -80,7 +83,21 @@ const SavedArticles = () => {
       );
 
       // Call the summarize API
+      const toastId = toast.loading('Generating summary...');
+      console.log('Summarizing article:', articleToSummarize.title);
+      
       const summary = await summarizeArticle(articleToSummarize);
+      console.log('Summary received:', summary);
+
+      if (!summary || summary === 'No summary available') {
+        toast.error('Could not generate summary for this article', { id: toastId });
+        setArticles(prev => 
+          prev.map(article => 
+            article.id === articleId ? { ...article, isSummarizing: false } : article
+          )
+        );
+        return;
+      }
 
       // Update the article with the summary
       setArticles(prev => 
@@ -89,10 +106,10 @@ const SavedArticles = () => {
         )
       );
 
-      toast.success('Article summarized successfully');
+      toast.success('Article summarized successfully', { id: toastId });
     } catch (error) {
       console.error('Error summarizing article:', error);
-      toast.error('Failed to summarize article');
+      toast.error(`Failed to summarize article: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
       // Reset the summarizing state
       setArticles(prev => 
