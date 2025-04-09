@@ -1,13 +1,14 @@
 import { Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
-import { useAuthenticationStatus, useSignOut, useUserData } from '@nhost/react';
+import { useAuthenticationStatus, useSignOut} from '@nhost/react';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import authService from '../services/authService';
 
 const Navbar = () => {
   const { isAuthenticated } = useAuthenticationStatus();
-  const user = useUserData();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // const user = useUserData();
   const { signOut } = useSignOut();
   const navigate = useNavigate();
 

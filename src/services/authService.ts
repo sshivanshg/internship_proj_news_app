@@ -1,4 +1,4 @@
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import { nhost } from '../App';
 
 interface JwtPayload {
@@ -17,7 +17,8 @@ export const authService = {
     if (token) return token;
     
     // Fallback to nhost's auth system
-    return nhost.auth.getAccessToken();
+    const nhostToken = nhost.auth.getAccessToken();
+    return nhostToken || null;
   },
 
   /**
